@@ -5,7 +5,6 @@ from concurrent.futures import ThreadPoolExecutor
 def is_reachable(ip):
     """Check if the IP is reachable using a simple ping."""
     try:
-        # This is a simplified check; in real scenarios, use appropriate libraries.
         return True  # Replace with actual connectivity check logic
     except Exception as e:
         print(f"Connection error for {ip}: {e}")
