@@ -15,6 +15,8 @@ def mock_executor():
 
 pytestmark = pytest.mark.asyncio
 
+@pytestmark = pytest.mark.asyncio
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("initial_alert_sent,status_before,status_after", [
     (False, None, False),
