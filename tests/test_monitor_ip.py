@@ -3,6 +3,8 @@ from unittest.mock import Mock, patch
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+import sys
+sys.path.append('/Users/jao/workspace/jmon')
 import jmon
 from jmon import monitor_ip
 

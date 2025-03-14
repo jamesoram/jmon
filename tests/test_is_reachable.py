@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import patch
 import subprocess
+import sys
+sys.path.append('/Users/jao/workspace/jmon')
 from jmon import is_reachable
 
 @pytest.fixture
