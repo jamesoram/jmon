@@ -13,9 +13,6 @@ def mock_executor():
     with patch('concurrent.futures.ThreadPoolExecutor') as mock_exec:
         yield mock_exec.return_value
 
-pytestmark = pytest.mark.asyncio
-
-@pytestmark = pytest.mark.asyncio
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("initial_alert_sent,status_before,status_after", [

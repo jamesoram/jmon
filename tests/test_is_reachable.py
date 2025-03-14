@@ -3,14 +3,8 @@ from unittest.mock import patch, Mock, MagicMock
 import subprocess
 import time
 import sys
-from subprocess import TimeoutError
 sys.path.append('/Users/jao/workspace/jmon')
 from jmon import is_reachable
-
-@pytest.fixture
-def mock_subprocess():
-    with patch('subprocess.run') as mock_run:
-        yield mock_run
 
 @pytest.fixture
 def mock_subprocess():
