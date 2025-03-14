@@ -20,7 +20,7 @@ async def test_monitor_ip_reachable(mock_executor, monkeypatch):
     monkeypatch.setattr(time, 'sleep', mock_sleep)
     
     mock_is_reachable = Mock(return_value=True)
-    monkeypatch.setitem(jmon, 'is_reachable', mock_is_reachable)
+    monkeypatch.setattr('jmon.is_reachable', mock_is_reachable)
 
     status = {'192.168.1.1': {'last_up': 0, 
                               'last_down_start': None,
@@ -41,8 +41,8 @@ async def test_monitor_ip_unreachable(mock_executor, monkeypatch):
     mock_sleep = Mock()
     monkeypatch.setattr(time, 'sleep', mock_sleep)
     
-    mock_is_reachable = Mock(return_value=False)
-    monkeypatch.setitem(jmon, 'is_reachable', mock_is_reachable)
+    mock_is_reachable = Mock(return_value=False) 
+    monkeypatch.setattr('jmon.is_reachable', mock_is_reachable)
 
     status = {'192.168.1.1': {'last_up': 0,
                               'last_down_start': None,

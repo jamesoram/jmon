@@ -34,9 +34,13 @@ def test_is_reachable_failure(mock_subprocess):
     result = is_reachable('192.168.1.1')
     assert result is False
 
+from unittest.mock import patch
+import subprocess
+
 def test_is_reachable_timeout(mock_subprocess):
-    # Setup mock to timeout
-    mock_subprocess.side_effect = subprocess.TimeoutError()
-    
-    result = is_reachable('192.168.1.1')
-    assert result is False
+    with patch('subprocess.run') as mock_run:
+        # Setup mock to timeout
+        mock_run.side_effect = subprocess.TimeoutError()
+        
+        result = is_reachable('192.168.1.1')
+        assert result is False
