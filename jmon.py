@@ -1,6 +1,7 @@
 import time
 import asyncio
 import logging
+import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
 def is_reachable(ip):
