@@ -1,11 +1,16 @@
-import setuptools
+from setuptools import setup, find_packages
 
-setuptools.setup(
+setup(
     name="jmon",
     version="0.1",
-    packages=["jmon"],
+    packages=find_packages(),
     install_requires=[
         'pytest',
         'pytest-asyncio'
-    ]
+    ],
+    entry_points={
+        'console_scripts': [
+            'jmon=jmon.main:main',
+        ],
+    },
 )
