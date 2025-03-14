@@ -13,6 +13,8 @@ def mock_executor():
     with patch('concurrent.futures.ThreadPoolExecutor') as mock_exec:
         yield mock_exec.return_value
 
+pytestmark = pytest.mark.asyncio
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("initial_alert_sent,status_before,status_after", [
     (False, None, False),
@@ -31,14 +33,20 @@ async def test_monitor_ip_behavior(mock_executor, monkeypatch, initial_alert_sen
                               'alert_sent': False}}
     
     # Create a simple event loop and run the function
-    loop = asyncio.new_event_loop()
-    await loop.run_until_complete(
-        monitor_ip('192.168.1.1', status, 3600)
-    )
+async def main():
+    with patch('jmon.is_reachable') as mock_is_reachable:
+        if 'setup' in locals():  # This is a weird way to check for setup
+            pass
+                
+    return await monitor_ip('192.168.1.1', status, 3600)
+    
+result = anyio.run(main)
     
     # Verify the status was updated correctly
     assert status['192.168.1.1']['last_up'] > 0
     mock_sleep.assert_called_once()
+
+pytestmark = pytest.mark.asyncio
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("initial_alert_sent,status_before,status_after", [
@@ -59,10 +67,14 @@ async def test_monitor_ip_unreachable(mock_executor, monkeypatch, initial_alert_
         'alert_sent': initial_alert_sent
     }}
     
-    loop = asyncio.new_event_loop()
-    await loop.run_until_complete(
-        monitor_ip('192.168.1.1', status, 3600)
-    )
+async def main():
+    with patch('jmon.is_reachable') as mock_is_reachable:
+        if 'setup' in locals():  # This is a weird way to check for setup
+            pass
+                
+    return await monitor_ip('192.168.1.1', status, 3600)
+    
+result = anyio.run(main)
     
     # Verify the status was updated correctly
     new_status = status['192.168.1.1']
