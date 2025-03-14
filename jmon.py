@@ -48,48 +48,12 @@ async def monitor_ip(ip, status, threshold_seconds):
         
         await asyncio.sleep(60)  # Poll every minute
 
-async def main():
-    ips = ['192.168.1.1', '192.168.1.2']  # Example IPs
-    X_hours = 24  # Threshold in hours
-    threshold_seconds = X_hours * 3600
-    status = {ip: {'last_up': time.time(), 
-                  'last_down_start': None, 
-                  'alert_sent': False} for ip in ips}
-    
-    # Use a ThreadPoolExecutor to handle concurrent IP checks
-    executor = ThreadPoolExecutor(max_workers=len(ips))
-    
-    tasks = []
-    for ip in ips:
-        task = asyncio.create_task(monitor_ip(ip, status, threshold_seconds))
-        tasks.append(task)
-    
-    await asyncio.gather(*tasks)
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     filename='ip_monitor.log',
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
-async def main():
-    ips = ['192.168.1.1', '192.168.1.2']  # Example IPs
-    X_hours = 24  # Threshold in hours
-    threshold_seconds = X_hours * 3600
-    status = {ip: {'last_up': time.time(), 
-                  'last_down_start': None, 
-                  'alert_sent': False} for ip in ips}
-    
-    # Use a ThreadPoolExecutor to handle concurrent IP checks
-    executor = ThreadPoolExecutor(max_workers=len(ips))
-    
-    tasks = []
-    for ip in ips:
-        task = asyncio.create_task(monitor_ip(ip, status, threshold_seconds))
-        tasks.append(task)
-    
-    await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
     asyncio.run(main())
