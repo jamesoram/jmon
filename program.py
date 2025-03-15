@@ -31,16 +31,12 @@ def run_command(cmd):
     except subprocess.CalledProcessError as e:
         print(f"Error running command: {e}")
 
-def main():
-    parser = argparse.ArgumentParser(description='Monitor IP addresses and run command on downtime')
+# Create parser at top level since it's used in __main__
+parser = argparse.ArgumentParser(description='Monitor IP addresses and run command on downtime')
 
-    parser.add_argument('-c', '--command', required=True, help='Command to run when IPs are down')
-    parser.add_argument('-i', '--ips', required=True, nargs='+',
-                        help='IP addresses to monitor (repeat for multiple)')
-    parser.add_argument('-t', '--timeout', type=float, required=True,
-                        help='Timeout period in seconds before triggering command')
-    
-    args = parser.parse_args()
+def main(args):
+
+    # Validate inputs
     
     # Validate inputs
     if not isinstance(args.timeout, float) or args.timeout <= 0:
@@ -74,7 +70,8 @@ def main():
             print("Some or all IPs are still up, no action taken.")
 
 if __name__ == "__main__":
+    args = parser.parse_args()
     if len(sys.argv) == 1:
         parser.print_help()
     else:
-        main()
+        main(args)
