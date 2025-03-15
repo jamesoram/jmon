@@ -1,5 +1,6 @@
 import sys
 import subprocess
+from subprocess import TimeoutExpired
 import argparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
@@ -32,6 +33,7 @@ def run_command(cmd):
 
 def main():
     parser = argparse.ArgumentParser(description='Monitor IP addresses and run command on downtime')
+
     parser.add_argument('-c', '--command', required=True, help='Command to run when IPs are down')
     parser.add_argument('-i', '--ips', required=True, nargs='+',
                         help='IP addresses to monitor (repeat for multiple)')
