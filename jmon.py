@@ -1,77 +1,77 @@
-import time
-import asyncio
-import logging
+import sys
 import subprocess
+from subprocess import TimeoutExpired
+import argparse
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-def is_reachable(ip):
-    """Check if the IP is reachable using a simple ping."""
+def is_ip_down(ip, timeout_seconds):
+    """Check if an IP is down using ping"""
+    start_time = datetime.now()
+    
     try:
-        # Use subprocess to run ping command
-        result = subprocess.run(
-            f"ping -c 1 {ip}",
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return result.returncode == 0
-    except Exception as e:
-        print(f"Connection error for {ip}: {e}")
-        return False
+        # Use ping command with -c 1 to get quick response
+        subprocess.check_output(f'ping -c 1 {ip}', shell=True, text=True)
+        return False, None  # IP is up
+    except subprocess.CalledProcessError as e:
+        # If ping fails, record the time it was down
+        end_time = datetime.now()
+        downtime = (end_time - start_time).total_seconds()
+        return True, downtime
+    except TimeoutExpired:
+        end_time = datetime.now()
+        downtime = (end_time - start_time).total_seconds()
+        return True, downtime
 
-async def monitor_ip(ip, status, threshold_seconds):
-    ip_id = hash(ip)  # Unique identifier for this IP context
-    while True:
-        try:
-            reachable = is_reachable(ip)
-            current_time = time.time()
-            
-            if reachable:
-                logging.info(f"IP {ip} is up")
-                status[ip]['last_up'] = current_time
-                status[ip]['last_down_start'] = None
-                status[ip]['alert_sent'] = False
-            else:
-                logging.warning(f"IP {ip} is down")
-                
-                if status[ip]['last_down_start'] is None:
-                    status[ip]['last_down_start'] = current_time
-                
-                downtime = current_time - status[ip]['last_down_start']
-                if downtime > threshold_seconds and not status[ip]['alert_sent']:
-                    print(f"[{ip_id}] Alert: {ip} has been down for {(downtime//3600):.1f} hours")
-                    status[ip]['alert_sent'] = True
+def run_command(cmd):
+    """Run the command in shell"""
+    try:
+        subprocess.run(cmd, shell=True, check=True)
+        print(f"Command '{cmd}' executed successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"Error running command: {e}")
 
-        except Exception as e:
-            print(f"Error monitoring {ip}: {e}")
+# Create parser at top level since it's used in __main__
+parser = argparse.ArgumentParser(description='Monitor IP addresses and run command on downtime')
+
+def main(args):
+
+    # Validate inputs
+    
+    # Validate inputs
+    if not isinstance(args.timeout, float) or args.timeout <= 0:
+        print("Error: Timeout must be a positive number")
+        return
+    
+    # Monitor IPs and their downtime
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for ip in args.ips:
+            future = executor.submit(is_ip_down, ip, args.timeout)
+            futures.append(future)
         
-        await asyncio.sleep(60)  # Poll every minute
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    filename='ip_monitor.log',
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-async def main():
-    ips = ['192.168.1.1', '192.168.1.2']  # Example IPs
-    X_hours = 24  # Threshold in hours
-    threshold_seconds = X_hours * 3600
-    status = {ip: {'last_up': time.time(), 
-                  'last_down_start': None, 
-                  'alert_sent': False} for ip in ips}
-    
-    # Use a ThreadPoolExecutor to handle concurrent IP checks
-    executor = ThreadPoolExecutor(max_workers=len(ips))
-    
-    tasks = []
-    for ip in ips:
-        task = asyncio.create_task(monitor_ip(ip, status, threshold_seconds))
-        tasks.append(task)
-    
-    await asyncio.gather(*tasks)
+        # Wait for all pings to complete
+        results = [f.result() for f in futures]
+        
+        # Check if all IPs are down beyond the timeout
+        all_down = True
+        total_downtime = 0.0
+        
+        for is_down, downtime in results:
+            if not is_down:
+                all_down = False
+                break
+            total_downtime += downtime
+        
+        if all_down and total_downtime >= args.timeout:
+            print("All IPs are down, running command...")
+            run_command(args.command)
+        else:
+            print("Some or all IPs are still up, no action taken.")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    args = parser.parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+    else:
+        main(args)
