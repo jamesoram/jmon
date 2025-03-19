@@ -5,19 +5,33 @@ import argparse
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-def is_ip_down(ip, timeout_seconds):
-    """Check if an IP is down using ping"""
-    start_time = datetime.now()
+def track_ip(ip, timeout_seconds):
+    """Continuously monitor an IP and track its downtime"""
+    last_down_start = None
+    total_downtime = 0.0
     
-    try:
-        # Use ping command with -c 1 to get quick response
-        subprocess.check_output(f'ping -c 1 {ip}', shell=True, text=True)
-        return False, None  # IP is up
-    except subprocess.CalledProcessError as e:
-        # If ping fails, record the time it was down
-        end_time = datetime.now()
-        downtime = (end_time - start_time).total_seconds()
-        return True, downtime
+    while True:
+        is_down, downtime = is_ip_down(ip, timeout_seconds)
+        
+        if is_down:
+            # If the IP is down, start tracking downtime or continue existing downtime
+            if last_down_start is None:
+                last_down_start = datetime.now()
+            else:
+                # Extend the current downtime
+                total_downtime += (datetime.now() - last_down_start).total_seconds()
+                last_down_start = datetime.now()
+        else:
+            # IP is up, reset tracking
+            last_down_start = None
+            total_downtime = 0.0
+        
+        # Yield after each check to allow other threads to run
+        yield {
+            'ip': ip,
+            'is_down': is_down,
+            'total_downtime': total_downtime
+        }
     except TimeoutExpired:
         end_time = datetime.now()
         downtime = (end_time - start_time).total_seconds()
@@ -47,31 +61,56 @@ def main(args):
         print("Error: Timeout must be a positive number")
         return
     
-    # Monitor IPs and their downtime
+    # Initialize tracking for each IP
+    ip_trackers = []
+    
     with ThreadPoolExecutor() as executor:
         futures = []
+        
+        # Start continuous monitoring for each IP
         for ip in args.ips:
-            future = executor.submit(is_ip_down, ip, args.timeout)
+            future = executor.submit(track_ip, ip, args.timeout)
             futures.append(future)
+            ip_trackers.append({'ip': ip, 'last_down_time': None, 'current_downtime': 0})
         
-        # Wait for all pings to complete
-        results = [f.result() for f in futures]
-        
-        # Check if all IPs are down beyond the timeout
-        all_down = True
-        total_downtime = 0.0
-        
-        for is_down, downtime in results:
-            if not is_down:
-                all_down = False
-                break
-            total_downtime += downtime
-        
-        if all_down and total_downtime >= args.timeout:
-            print("All IPs are down, running command...")
-            run_command(args.command)
-        else:
-            print("Some or all IPs are still up, no action taken.")
+        while True:
+            # Wait for updates from all trackers
+            results = [f.result() for f in futures]
+            
+            # Update IP status and downtime tracking
+            for i, result in enumerate(results):
+                ip_info = ip_trackers[i]
+                
+                if result['is_down']:
+                    if ip_info['last_down_time'] is None:
+                        ip_info['last_down_time'] = datetime.now()
+                        ip_info['current_downtime'] = 0.0
+                    else:
+                        downtime = (datetime.now() - ip_info['last_down_time']).total_seconds()
+                        ip_info['current_downtime'] += downtime
+                        ip_info['last_down_time'] = datetime.now()
+                else:
+                    ip_info['last_down_time'] = None
+                    ip_info['current_downtime'] = 0.0
+            
+            # Check if all IPs have met the downtime threshold
+            all_down = True
+            for tracker in ip_trackers:
+                if tracker['last_down_time'] is not None and \
+                   tracker['current_downtime'] >= args.timeout:
+                    continue
+                else:
+                    all_down = False
+                    break
+            
+            if all_down:
+                print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
+                run_command(args.command)
+                return  # Exit after executing the command
+                
+            time.sleep(1)  # Check again in one second
+            
+            # If we're checking an IP that's come back up, reset tracking
 
 if __name__ == "__main__":
     args = parser.parse_args()
