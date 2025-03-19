@@ -45,7 +45,12 @@ async def track_ip(ip, timeout_seconds, trackers, start_time):
                             tracker['last_down_time'] = None
                             tracker['current_downtime'] = 0.0 if 'current_downtime' in tracker else downtime
                     else:
-                        await asyncio.sleep(1)
+                        # Wait until the next scheduled check time
+                        wait_time = next_check_time - now
+                        if wait_time.total_seconds() > 0:
+                            await asyncio.sleep(wait_time.total_seconds())
+                        else:
+                            await asyncio.sleep(1)
                 else:
                     await asyncio.sleep(1)
             except asyncio.CancelledError:
