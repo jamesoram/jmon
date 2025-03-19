@@ -8,9 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 def track_ip(ip, timeout_seconds):
     """Continuously monitor an IP and track its downtime"""
+    start_time = datetime.now()  # Move start_time definition here
+    
     def is_ip_down():
-        start_time = datetime.now()
-        
         try:
             # Use ping command with -c 1 to get quick response
             subprocess.check_output(f'ping -c 1 {ip}', shell=True, text=True)
@@ -20,6 +20,8 @@ def track_ip(ip, timeout_seconds):
             end_time = datetime.now()
             downtime = (end_time - start_time).total_seconds()
             return True, downtime
+            
+    # Use the same start_time for both tracking and pinging
 
     last_down_start = None
     total_downtime = 0.0
