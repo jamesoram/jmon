@@ -27,15 +27,16 @@ def track_ip(ip, timeout_seconds):
             total_downtime = 0.0
         
         # Yield after each check to allow other threads to run
-        yield {
-            'ip': ip,
-            'is_down': is_down,
-            'total_downtime': total_downtime
-        }
-    except TimeoutExpired:
-        end_time = datetime.now()
-        downtime = (end_time - start_time).total_seconds()
-        return True, downtime
+        try:
+            yield {
+                'ip': ip,
+                'is_down': is_down,
+                'total_downtime': total_downtime
+            }
+        except TimeoutExpired:
+            end_time = datetime.now()
+            downtime = (end_time - start_time).total_seconds()
+            return True, downtime
 
 def run_command(cmd):
     """Run the command in shell"""
