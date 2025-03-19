@@ -5,7 +5,6 @@ from subprocess import TimeoutExpired
 import argparse
 from datetime import datetime, timedelta
 import time
-from concurrent.futures import ThreadPoolExecutor
 
 async def track_ip(ip, timeout_seconds):
     """Continuously monitor an IP and track its downtime"""
@@ -78,18 +77,16 @@ async def main(args):
     # Initialize tracking for each IP
     ip_trackers = []
     
-    with asyncio.Pool() as executor:
-        futures = []
+    tasks = []
         
-        # Start continuous monitoring for each IP
-        for ip in args.ips:
-            future = executor.submit(track_ip, ip, args.timeout)
-            futures.append(future)
+    # Create tasks for each IP tracker
+    for ip in args.ips:
+        tasks.append(track_ip(ip, args.timeout))
             ip_trackers.append({'ip': ip, 'last_down_time': None, 'current_downtime': 0})
         
         while True:
             # Wait for updates from all trackers
-            results = await asyncio.gather(*futures)
+            results = await asyncio.gather(*tasks)
             
             # Update IP status and downtime tracking
             for i, result in enumerate(results):
