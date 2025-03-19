@@ -21,7 +21,7 @@ async def track_ip(ip, timeout_seconds, trackers, start_time):
             downtime = (end_time - start_time).total_seconds()
             return True, downtime
 
-    while True:
+    try:
         next_check_time = start_time + timedelta(seconds=timeout_seconds)
         while True:
             try:
@@ -50,6 +50,10 @@ async def track_ip(ip, timeout_seconds, trackers, start_time):
                         if wait_time.total_seconds() > 0:
                             await asyncio.sleep(wait_time.total_seconds())
                         else:
+                            # Check for cancellation
+                            except asyncio.CancelledError:
+                                break
+                            # Continue checking
                             await asyncio.sleep(1)
                 else:
                     await asyncio.sleep(1)
@@ -130,9 +134,15 @@ async def main(args):
         if all_down and len(ip_trackers) > 0:
             print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
             run_command(args.command)
+            # Cancel all tracking tasks after successful command execution
+            for task in track_tasks:
+                task.cancel()
     except asyncio.CancelledError:
         # If we're being canceled (e.g. via KeyboardInterrupt), just exit
         pass
+
+async def cleanup(loop):
+    loop.stop()
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -144,3 +154,6 @@ if __name__ == "__main__":
         asyncio.run(main(args))
     except KeyboardInterrupt:
         print("\nUser interrupted monitoring")
+        # Create a new event loop to handle cleanup
+        loop = asyncio.new_event_loop()
+        asyncio.run_coroutine_threadsafe(cleanup(asyncio.get_event_loop()), loop)
