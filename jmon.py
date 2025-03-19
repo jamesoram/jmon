@@ -118,19 +118,25 @@ async def main(args):
     track_tasks = [asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time)) 
                   for ip in args.ips]
     
+    # Create tracking tasks and wait for them to complete
+    track_tasks = [asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time)) 
+                  for ip in args.ips]
+    
     try:
         await asyncio.gather(*track_tasks)
     except KeyboardInterrupt:
         print("\nUser interrupted monitoring")
         return
-        all_down = True
-        for ip, tracker in ip_trackers.items():
-            if tracker['last_down_time'] is None or \
-               tracker['current_downtime'] < args.timeout:
-                all_down = False
-                break
-        
-        if all_down and len(ip_trackers) > 0:
+    
+    # After all tasks complete, check if condition was met
+    all_down = True
+    for ip, tracker in ip_trackers.items():
+        if tracker['last_down_time'] is None or \
+           tracker['current_downtime'] < args.timeout:
+            all_down = False
+            break
+
+    if all_down and len(ip_trackers) > 0:
             try:
                 print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
                 run_command(args.command)
