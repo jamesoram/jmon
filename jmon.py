@@ -74,14 +74,13 @@ async def main(args):
     # Record the start time
     start_time = datetime.now()
     
+    # Initialize task tracking lists
+    all_tasks = []
+    
     # Create tasks for each IP tracker and add to the event loop
-    tasks = []
     for ip in args.ips:
         new_task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time))
         all_tasks.append(new_task)
-    
-    # Create list to track all tasks
-    all_tasks = []
     
     while True:
         await asyncio.sleep(1)
