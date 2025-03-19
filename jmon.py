@@ -6,7 +6,7 @@ import argparse
 from datetime import datetime, timedelta
 import time
 
-async def track_ip(ip, timeout_seconds, trackers):
+async def track_ip(ip, timeout_seconds, trackers, start_time):
     """Continuously monitor an IP and update its tracker state"""
     async def is_ip_down():
         try:
@@ -74,7 +74,7 @@ async def main(args):
     # Create tasks for each IP tracker and add to the event loop
     tasks = []
     for ip in args.ips:
-        task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers))
+        task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time))
         tasks.append(task)
     
     while True:
