@@ -6,10 +6,8 @@ import argparse
 from datetime import datetime, timedelta
 import time
 
-async def track_ip(ip, timeout_seconds):
-    """Continuously monitor an IP and track its downtime"""
-    start_time = datetime.now()
-    
+async def track_ip(ip, timeout_seconds, trackers):
+    """Continuously monitor an IP and update its tracker state"""
     async def is_ip_down():
         try:
             # Use ping command with -c 1 to get quick response
@@ -20,36 +18,31 @@ async def track_ip(ip, timeout_seconds):
             end_time = datetime.now()
             downtime = (end_time - start_time).total_seconds()
             return True, downtime
-            
-    # Use the same start_time for both tracking and pinging
 
-    last_down_start = None
-    total_downtime = 0.0
-    
     while True:
         await asyncio.sleep(1)  # Sleep for one second between checks
-        is_down, downtime = await is_ip_down()  # Add await to get the result
+        is_down, downtime = await is_ip_down()  # Get the result
         
-        if is_down:
-            # If the IP is down, start tracking downtime or continue existing downtime
-            if last_down_start is None:
-                last_down_start = datetime.now()
-            else:
-                # Extend the current downtime
-                total_downtime += (datetime.now() - last_down_start).total_seconds()
-                last_down_start = datetime.now()
+        if ip in trackers:
+            tracker = trackers[ip]
         else:
-            # IP is up, reset tracking
-            last_down_start = None
-            total_downtime = 0.0
-        
-        # Yield after each check to allow other threads to run
-        await asyncio.sleep(1)  # Sleep for one second between checks
-        return {
-            'ip': ip,
-            'is_down': is_down,
-            'total_downtime': total_downtime
-        }
+            tracker = {
+                'last_down_time': None,
+                'current_downtime': 0.0
+            }
+            trackers[ip] = tracker
+
+        if is_down:
+            if tracker['last_down_time'] is None:
+                tracker['last_down_time'] = datetime.now()
+                tracker['current_downtime'] = downtime
+            else:
+                new_downtime = (datetime.now() - tracker['last_down_time']).total_seconds()
+                tracker['current_downtime'] += new_downtime
+                tracker['last_down_time'] = datetime.now()
+        else:
+            tracker['last_down_time'] = None
+            tracker['current_downtime'] = 0.0
 
 def run_command(cmd):
     """Run the command in shell"""
@@ -75,54 +68,33 @@ async def main(args):
         print("Error: Timeout must be a positive number")
         return
     
-    # Initialize tracking for each IP
-    ip_trackers = []
+    # Initialize empty trackers dictionary
+    ip_trackers = {}
     
+    # Create tasks for each IP tracker and add to the event loop
     tasks = []
-        
-    # Create tasks and initialize trackers for each IP
     for ip in args.ips:
-        tasks.append(track_ip(ip, args.timeout))
-        ip_trackers.append({'ip': ip, 'last_down_time': None, 'current_downtime': 0})
+        task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers))
+        tasks.append(task)
+    
+    while True:
+        # Check all trackers every second
+        await asyncio.sleep(1)
         
-        while True:
-            # Wait for updates from all trackers
-            results = await asyncio.gather(*tasks)
+        all_down = True
+        for ip, tracker in ip_trackers.items():
+            if tracker['last_down_time'] is not None and \
+               tracker['current_downtime'] >= args.timeout:
+                continue
+            else:
+                all_down = False
+                break
+        
+        if all_down:
+            print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
+            run_command(args.command)
+            return  # Exit after executing the command
             
-            # Update IP status and downtime tracking
-            for i, result in enumerate(results):
-                ip_info = ip_trackers[i]
-                
-                if result['is_down']:
-                    if ip_info['last_down_time'] is None:
-                        ip_info['last_down_time'] = datetime.now()
-                        ip_info['current_downtime'] = 0.0
-                    else:
-                        downtime = (datetime.now() - ip_info['last_down_time']).total_seconds()
-                        ip_info['current_downtime'] += downtime
-                        ip_info['last_down_time'] = datetime.now()
-                else:
-                    ip_info['last_down_time'] = None
-                    ip_info['current_downtime'] = 0.0
-            
-            # Check if all IPs have met the downtime threshold
-            all_down = True
-            for tracker in ip_trackers:
-                if tracker['last_down_time'] is not None and \
-                   tracker['current_downtime'] >= args.timeout:
-                    continue
-                else:
-                    all_down = False
-                    break
-            
-            if all_down:
-                print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
-                run_command(args.command)
-                return  # Exit after executing the command
-                
-            time.sleep(1)  # Check again in one second
-            
-            # If we're checking an IP that's come back up, reset tracking
 
 if __name__ == "__main__":
     args = parser.parse_args()
