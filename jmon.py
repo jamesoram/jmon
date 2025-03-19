@@ -131,12 +131,6 @@ async def main(args):
             
         # Wait a short period before checking again
         await asyncio.sleep(1)
-        try:
-            print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
-            run_command(args.command)
-            break
-        except asyncio.CancelledError:
-            pass
 
 if __name__ == "__main__":
     args = parser.parse_args()
