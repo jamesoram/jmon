@@ -77,11 +77,13 @@ async def main(args):
     # Create tasks for each IP tracker and add to the event loop
     tasks = []
     for ip in args.ips:
-        task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time))
-        tasks.append(task)
+        new_task = asyncio.create_task(track_ip(ip, args.timeout, ip_trackers, start_time))
+        all_tasks.append(new_task)
+    
+    # Create list to track all tasks
+    all_tasks = []
     
     while True:
-        # Check all trackers every second
         await asyncio.sleep(1)
         
         all_down = True
@@ -96,7 +98,12 @@ async def main(args):
         if all_down:
             print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
             run_command(args.command)
-            return  # Exit after executing the command
+            
+            # Cancel all tasks and wait for them to complete
+            for task in all_tasks:
+                task.cancel()
+            await asyncio.gather(*all_tasks, return_exceptions=True)
+            break
             
 
 if __name__ == "__main__":
