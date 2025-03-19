@@ -3,15 +3,29 @@ import subprocess
 from subprocess import TimeoutExpired
 import argparse
 from datetime import datetime, timedelta
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 def track_ip(ip, timeout_seconds):
     """Continuously monitor an IP and track its downtime"""
+    def is_ip_down():
+        start_time = datetime.now()
+        
+        try:
+            # Use ping command with -c 1 to get quick response
+            subprocess.check_output(f'ping -c 1 {ip}', shell=True, text=True)
+            return False, None  # IP is up
+        except subprocess.CalledProcessError as e:
+            # If ping fails, record the time it was down
+            end_time = datetime.now()
+            downtime = (end_time - start_time).total_seconds()
+            return True, downtime
+
     last_down_start = None
     total_downtime = 0.0
     
     while True:
-        is_down, downtime = is_ip_down(ip, timeout_seconds)
+        is_down, downtime = is_ip_down()
         
         if is_down:
             # If the IP is down, start tracking downtime or continue existing downtime
