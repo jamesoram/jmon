@@ -134,20 +134,20 @@ async def main(args):
         try:
             print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
             run_command(args.command)
-            
-            # Cancel tasks and wait for completion with exceptions
-            for task in track_tasks:
-                task.cancel()
-            await asyncio.gather(*track_tasks, return_exceptions=True)
+            break
         except asyncio.CancelledError:
             pass
-            
 
 if __name__ == "__main__":
     args = parser.parse_args()
     if len(sys.argv) == 1:
         parser.print_help()
+        sys.exit(1)
     else:
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(main(args))
-        loop.close()
+        loop = None
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(main(args))
+        finally:
+            if loop is not None:
+                loop.close()
