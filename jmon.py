@@ -71,6 +71,9 @@ async def main(args):
     # Initialize empty trackers dictionary
     ip_trackers = {}
     
+    # Record the start time
+    start_time = datetime.now()
+    
     # Create tasks for each IP tracker and add to the event loop
     tasks = []
     for ip in args.ips:
