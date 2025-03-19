@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-def track_ip(ip, timeout_seconds):
+async def track_ip(ip, timeout_seconds):
     """Continuously monitor an IP and track its downtime"""
-    start_time = datetime.now()  # Move start_time definition here
+    start_time = datetime.now()
     
-    def is_ip_down():
+    async def is_ip_down():
         try:
             # Use ping command with -c 1 to get quick response
             subprocess.check_output(f'ping -c 1 {ip}', shell=True, text=True)
@@ -43,16 +43,12 @@ def track_ip(ip, timeout_seconds):
             total_downtime = 0.0
         
         # Yield after each check to allow other threads to run
-        try:
-            yield {
-                'ip': ip,
-                'is_down': is_down,
-                'total_downtime': total_downtime
-            }
-        except TimeoutExpired:
-            end_time = datetime.now()
-            downtime = (end_time - start_time).total_seconds()
-            return True, downtime
+        await asyncio.sleep(1)  # Sleep for one second between checks
+        return {
+            'ip': ip,
+            'is_down': is_down,
+            'total_downtime': total_downtime
+        }
 
 def run_command(cmd):
     """Run the command in shell"""
@@ -73,7 +69,7 @@ parser.add_argument('--ips', nargs='+', required=True,
 parser.add_argument('--command', type=str, required=True,
                     help='Command to execute when all IPs are down')
 
-def main(args):
+async def main(args):
     if not isinstance(args.timeout, float) or args.timeout <= 0:
         print("Error: Timeout must be a positive number")
         return
@@ -81,7 +77,7 @@ def main(args):
     # Initialize tracking for each IP
     ip_trackers = []
     
-    with ThreadPoolExecutor() as executor:
+    with asyncio.Pool() as executor:
         futures = []
         
         # Start continuous monitoring for each IP
@@ -92,7 +88,7 @@ def main(args):
         
         while True:
             # Wait for updates from all trackers
-            results = [f.result() for f in futures]
+            results = await asyncio.gather(*futures)
             
             # Update IP status and downtime tracking
             for i, result in enumerate(results):
