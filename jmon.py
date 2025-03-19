@@ -79,10 +79,10 @@ async def main(args):
     
     tasks = []
         
-    # Create tasks for each IP tracker
+    # Create tasks and initialize trackers for each IP
     for ip in args.ips:
         tasks.append(track_ip(ip, args.timeout))
-            ip_trackers.append({'ip': ip, 'last_down_time': None, 'current_downtime': 0})
+        ip_trackers.append({'ip': ip, 'last_down_time': None, 'current_downtime': 0})
         
         while True:
             # Wait for updates from all trackers
