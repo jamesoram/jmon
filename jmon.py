@@ -27,7 +27,8 @@ async def track_ip(ip, timeout_seconds):
     total_downtime = 0.0
     
     while True:
-        is_down, downtime = is_ip_down()
+        await asyncio.sleep(1)  # Sleep for one second between checks
+        is_down, downtime = await is_ip_down()  # Add await to get the result
         
         if is_down:
             # If the IP is down, start tracking downtime or continue existing downtime
