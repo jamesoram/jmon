@@ -131,4 +131,6 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         parser.print_help()
     else:
-        main(args)
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(main(args))
+        loop.close()
