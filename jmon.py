@@ -32,13 +32,17 @@ def run_command(cmd):
         print(f"Error running command: {e}")
 
 # Create parser at top level since it's used in __main__
-parser = argparse.ArgumentParser(description='Monitor IP addresses and run command on downtime')
+parser = argparse.ArgumentParser(description='''
+ Monitor IP addresses and run a command when all are down for specified duration''')
+
+parser.add_argument('--timeout', type=float, required=True,
+                    help='Minimum downtime threshold in seconds')
+parser.add_argument('--ips', nargs='+', required=True,
+                    help='List of IP addresses to monitor (space-separated)')
+parser.add_argument('--command', type=str, required=True,
+                    help='Command to execute when all IPs are down')
 
 def main(args):
-
-    # Validate inputs
-    
-    # Validate inputs
     if not isinstance(args.timeout, float) or args.timeout <= 0:
         print("Error: Timeout must be a positive number")
         return
