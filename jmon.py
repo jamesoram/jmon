@@ -34,15 +34,18 @@ async def track_ip(ip, timeout_seconds, trackers, start_time):
 
         if is_down:
             if tracker['last_down_time'] is None:
+                # First time being down, set initial downtime
                 tracker['last_down_time'] = datetime.now()
                 tracker['current_downtime'] = downtime
             else:
+                # Calculate new downtime and accumulate
                 new_downtime = (datetime.now() - tracker['last_down_time']).total_seconds()
                 tracker['current_downtime'] += new_downtime
                 tracker['last_down_time'] = datetime.now()
         else:
+            # IP is up, reset tracking
             tracker['last_down_time'] = None
-            tracker['current_downtime'] = 0.0
+            tracker['current_downtime'] = 0.0 if 'current_downtime' in tracker else downtime
 
 def run_command(cmd):
     """Run the command in shell"""
@@ -85,16 +88,15 @@ async def main(args):
     while True:
         await asyncio.sleep(1)
         
+        # Check if all IPs have met the downtime threshold
         all_down = True
         for ip, tracker in ip_trackers.items():
-            if tracker['last_down_time'] is not None and \
-               tracker['current_downtime'] >= args.timeout:
-                continue
-            else:
+            if tracker['last_down_time'] is None or \
+               tracker['current_downtime'] < args.timeout:
                 all_down = False
                 break
         
-        if all_down:
+        if all_down and len(ip_trackers) > 0:
             print("All IPs have been down for at least {} seconds, running command...".format(args.timeout))
             run_command(args.command)
             
